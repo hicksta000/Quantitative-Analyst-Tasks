@@ -1,0 +1,90 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Read the data from the text file into a DataFrame
+data = pd.read_csv("data.txt", header=None)
+data.columns = ['Timestamp', 'Value']
+
+# Convert the Timestamp to datetime
+data['Timestamp'] = pd.to_datetime(data['Timestamp'], unit='ms')
+
+# Plot the data
+plt.figure(figsize=(10, 6))
+plt.plot(data['Timestamp'], data['Value'], marker='o', linestyle='-')
+plt.title('Stock Value Over Time')
+plt.xlabel('Date')
+plt.ylabel('Value')
+plt.grid(True)
+plt.xticks(rotation=45)
+plt.tight_layout()
+
+# Show the plot
+plt.show()
+
+#Bonus Challenge: Create a program using Python language that finds other stocks that have "similar" graphs to the stock from the data.txt text file and figure out what the mystery stock is.
+
+import pandas as pd
+import matplotlib.pyplot as plt
+from alpha_vantage.timeseries import TimeSeries
+
+# Function to fetch stock data from Alpha Vantage API
+def fetch_stock_data(symbol):
+    api_key = 'YOUR_ALPHA_VANTAGE_API_KEY'  # Replace this with your Alpha Vantage API key
+    ts = TimeSeries(key=api_key, output_format='pandas')
+    data, meta_data = ts.get_daily(symbol=symbol, outputsize='full')
+    data.reset_index(inplace=True)
+    data.columns = ['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
+    data['Timestamp'] = pd.to_datetime(data['Timestamp'])
+    data = data[['Timestamp', 'Close']]  # We are interested in closing prices
+    return data
+
+# Fetch data for the mystery stock (replace 'AAPL' with the appropriate stock symbol)
+mystery_stock_symbol = 'AAPL'
+mystery_stock = fetch_stock_data(mystery_stock_symbol)
+
+# Print the fetched stock data
+print("Fetched stock data for the mystery stock:")
+print(mystery_stock.head())
+
+# You can implement similar functions to fetch data for other stocks
+
+# Function to calculate correlation between two stocks
+def calculate_correlation(stock1, stock2):
+    merged_data = pd.merge(stock1, stock2, on='Timestamp', suffixes=('_1', '_2'))
+    correlation = merged_data['Close_1'].corr(merged_data['Close_2'])
+    return correlation
+
+# Fetch data for other stocks
+# Replace 'GOOGL', 'MSFT', 'AMZN' with appropriate stock symbols
+other_stocks_symbols = ['GOOGL', 'MSFT', 'AMZN']
+other_stocks = {symbol: fetch_stock_data(symbol) for symbol in other_stocks_symbols}
+
+# Calculate correlations between the mystery stock and other stocks
+correlations = {}
+for symbol, stock in other_stocks.items():
+    correlation = calculate_correlation(mystery_stock, stock)
+    correlations[symbol] = correlation
+
+# Sort stocks by correlation (higher correlation means more similar)
+sorted_correlations = sorted(correlations.items(), key=lambda x: x[1], reverse=True)
+
+# Print the top correlated stocks
+print("\nStocks with similar price movements to the mystery stock:")
+for symbol, correlation in sorted_correlations:
+    print(f"{symbol}: Correlation = {correlation}")
+
+# Plot the most similar stock
+most_similar_stock_symbol = sorted_correlations[0][0]
+most_similar_stock = other_stocks[most_similar_stock_symbol]
+
+plt.figure(figsize=(10, 6))
+plt.plot(mystery_stock['Timestamp'], mystery_stock['Close'], label='Mystery Stock', marker='o', linestyle='-')
+plt.plot(most_similar_stock['Timestamp'], most_similar_stock['Close'], label='Most Similar Stock', marker='o', linestyle='-')
+plt.title('Comparison of Mystery Stock and Most Similar Stock')
+plt.xlabel('Date')
+plt.ylabel('Closing Price')
+plt.legend()
+plt.grid(True)
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
